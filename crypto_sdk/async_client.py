@@ -13,7 +13,7 @@ class AsyncCoinGeckoClient:
             "order": "market_cap_desc",
             "per_page": 10,
             "page": 1,
-            "sparkline": False
+            "sparkline": False,
         }
 
         async with httpx.AsyncClient(timeout=5) as client:
@@ -29,7 +29,7 @@ class AsyncCoinGeckoClient:
                 name=item["name"],
                 current_price=item["current_price"],
                 market_cap=item["market_cap"],
-                price_change_percentage_24h=item["price_change_percentage_24h"]
+                price_change_percentage_24h=item["price_change_percentage_24h"],
             )
             for item in data
         ]

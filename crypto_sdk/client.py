@@ -18,9 +18,7 @@ class CoinGeckoClient:
         self.session = requests.Session()
 
         retries = Retry(
-            total=3,
-            backoff_factor=1,
-            status_forcelist=[429, 500, 502, 503, 504]
+            total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504]
         )
 
         adapter = HTTPAdapter(max_retries=retries)
@@ -34,17 +32,13 @@ class CoinGeckoClient:
             "order": "market_cap_desc",
             "per_page": 10,
             "page": 1,
-            "sparkline": False
+            "sparkline": False,
         }
 
         try:
             logger.info("Fetching market data from CoinGecko...")
 
-            response = self.session.get(
-                url,
-                params=params,
-                timeout=5
-            )
+            response = self.session.get(url, params=params, timeout=5)
 
             response.raise_for_status()
 
@@ -61,7 +55,7 @@ class CoinGeckoClient:
                 name=item["name"],
                 current_price=item["current_price"],
                 market_cap=item["market_cap"],
-                price_change_percentage_24h=item["price_change_percentage_24h"]
+                price_change_percentage_24h=item["price_change_percentage_24h"],
             )
             for item in data
         ]

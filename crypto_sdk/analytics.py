@@ -1,9 +1,9 @@
 # crypto_sdk/analytics.py
 
+
 def top_movers(assets, threshold=5.0):
     return [
-        asset for asset in assets
-        if abs(asset.price_change_percentage_24h) > threshold
+        asset for asset in assets if abs(asset.price_change_percentage_24h) > threshold
     ]
 
 
@@ -16,10 +16,8 @@ def average_price(assets):
 
 
 def filter_by_market_cap(assets, min_market_cap):
-    return [
-        asset for asset in assets
-        if asset.market_cap >= min_market_cap
-    ]
+    return [asset for asset in assets if asset.market_cap >= min_market_cap]
+
 
 def biggest_gainer(assets):
     if not assets:
