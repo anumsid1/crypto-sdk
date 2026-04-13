@@ -13,3 +13,10 @@ __pycache__/
 
 # IDE
 .vscode/
+
+# Environment variables (never commit this)
+.env
+
+# Logs
+logs/
+*.log

@@ -1,11 +1,14 @@
 # crypto_sdk/client.py
 
+import os
 import requests
 import logging
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from dotenv import load_dotenv
 from .models import CryptoAsset
 
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -16,14 +19,10 @@ class CryptoAPIError(Exception):
 
 
 class CoinGeckoClient:
-    def __init__(
-        self,
-        base_url="https://api.coingecko.com/api/v3",
-        timeout=5,
-        retries=3,
-    ):
-        self.base_url = base_url
-        self.timeout = timeout
+    def __init__(self, base_url=None):
+        self.base_url = base_url or os.getenv("COINGECKO_BASE_URL", "https://api.coingecko.com/api/v3")
+        self.timeout = int(os.getenv("COINGECKO_TIMEOUT", 5))
+        retries = int(os.getenv("COINGECKO_RETRIES", 3))
 
         self.session = requests.Session()
 
@@ -38,13 +37,13 @@ class CoinGeckoClient:
         self.session.mount("https://", adapter)
         self.session.mount("http://", adapter)
 
-    def fetch_market_data(self, vs_currency="usd"):
+    def fetch_market_data(self, vs_currency=None, per_page=None):
         url = f"{self.base_url}/coins/markets"
 
         params = {
-            "vs_currency": vs_currency,
+            "vs_currency": vs_currency or os.getenv("DEFAULT_CURRENCY", "usd"),
             "order": "market_cap_desc",
-            "per_page": 10,
+            "per_page": per_page or int(os.getenv("DEFAULT_PER_PAGE", 10)),
             "page": 1,
             "sparkline": False,
         }
