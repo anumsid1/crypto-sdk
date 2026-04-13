@@ -1,4 +1,4 @@
-#!/Users/admin/Desktop/python/crypto_sdk_project/venv/bin/python
+#!/Users/admin/Desktop/python/crypto_sdk_project/venv/bin/python3.11
 import sys
 from url_normalize.cli import main
 if __name__ == '__main__':

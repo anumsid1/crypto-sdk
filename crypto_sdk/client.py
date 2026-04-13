@@ -7,25 +7,39 @@ from urllib3.util.retry import Retry
 from .models import CryptoAsset
 
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class CoinGeckoClient:
-    BASE_URL = "https://api.coingecko.com/api/v3"
+class CryptoAPIError(Exception):
+    """Base exception for Crypto SDK errors."""
+    pass
 
-    def __init__(self):
+
+class CoinGeckoClient:
+    def __init__(
+        self,
+        base_url="https://api.coingecko.com/api/v3",
+        timeout=5,
+        retries=3,
+    ):
+        self.base_url = base_url
+        self.timeout = timeout
+
         self.session = requests.Session()
 
-        retries = Retry(
-            total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504]
+        retry_strategy = Retry(
+            total=retries,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["GET"],
         )
 
-        adapter = HTTPAdapter(max_retries=retries)
+        adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
 
     def fetch_market_data(self, vs_currency="usd"):
-        url = f"{self.BASE_URL}/coins/markets"
+        url = f"{self.base_url}/coins/markets"
 
         params = {
             "vs_currency": vs_currency,
@@ -38,13 +52,29 @@ class CoinGeckoClient:
         try:
             logger.info("Fetching market data from CoinGecko...")
 
-            response = self.session.get(url, params=params, timeout=5)
+            response = self.session.get(
+                url,
+                params=params,
+                timeout=self.timeout,
+            )
 
             response.raise_for_status()
 
+        except requests.exceptions.Timeout:
+            logger.error("Request timed out")
+            raise CryptoAPIError("Request to CoinGecko timed out")
+
+        except requests.exceptions.ConnectionError:
+            logger.error("Connection failed")
+            raise CryptoAPIError("Failed to connect to CoinGecko API")
+
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"HTTP error: {e}")
+            raise CryptoAPIError(f"CoinGecko API returned HTTP error: {e}")
+
         except requests.exceptions.RequestException as e:
-            logger.error(f"API request failed: {e}")
-            raise
+            logger.error(f"Unexpected request error: {e}")
+            raise CryptoAPIError("Unexpected API error")
 
         data = response.json()
 
