@@ -1,6 +1,6 @@
 # Crypto SDK
 
-Python SDK for fetching and analyzing cryptocurrency market data.
+  A crypto price SDK that hits the CoinGecko public API, parses responses into dataclasses, and has basic analytics (top movers, average price, etc). It also has an async variant with httpx. 
 
 ## Features
 
