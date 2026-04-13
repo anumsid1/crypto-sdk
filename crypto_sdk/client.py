@@ -2,15 +2,16 @@
 
 import os
 import requests
-import logging
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from dotenv import load_dotenv
 from .models import CryptoAsset
+from .logger import setup_logger
+
 
 load_dotenv()
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 class CryptoAPIError(Exception):
@@ -88,3 +89,4 @@ class CoinGeckoClient:
             )
             for item in data
         ]
+    
