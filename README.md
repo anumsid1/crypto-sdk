@@ -24,5 +24,6 @@ Python SDK for fetching and analyzing cryptocurrency market data.
 ## Testing
 - `cd crypto_sdk_project`
 -  Run `python main.py`
+- `python3 -m pip install requests`
 - `pip install pytest`
 - `python -m pytest`
