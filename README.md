@@ -23,7 +23,7 @@ python main.py
 
 - `python -m pytest`
 - ```rm -rf venv
-python3 -m venv venv
+- python3 -m venv venv
 source venv/bin/activate
 pip install -e .```
 - `pip install build`
