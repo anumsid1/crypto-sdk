@@ -1,17 +1,24 @@
 # test/test_api.py
 #
-# Tests for the FastAPI routes using a fake adapter.
-# The fake adapter implements MarketDataAdapter but returns hardcoded data.
-# This means tests never hit the real CoinGecko API — fast and reliable.
+# Tests for the FastAPI routes using a fake adapter and in-memory database.
+# No real API calls, no real database file — fast and isolated.
 
 import pytest
 from fastapi.testclient import TestClient
 from typing import List, Optional
+from datetime import datetime, timezone
 
 from crypto_sdk.adapters.base import MarketDataAdapter
 from crypto_sdk.models import CryptoAsset
+from crypto_sdk.database import Base, PriceSnapshot, PriceAlert
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
 from server import app
 import api.routes as routes_module
+
+
+# --- Fake adapter ---
 
 FAKE_ASSETS = [
     CryptoAsset(
@@ -55,13 +62,38 @@ class FakeMarketDataAdapter(MarketDataAdapter):
 # --- Fixtures ---
 
 @pytest.fixture
-def client():
-    # Swap the real adapter for the fake one before each test
+def test_db():
+    """
+    Create a fresh in-memory SQLite database for each test.
+    Patches get_session in api.routes so route handlers use the test DB.
+    """
+    import api.routes as routes_module
+
+    test_engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(test_engine)
+
+    def test_get_session():
+        return Session(test_engine)
+
+    original_get_session = routes_module.get_session
+    routes_module.get_session = test_get_session
+
+    yield test_get_session
+
+    routes_module.get_session = original_get_session
+
+
+@pytest.fixture
+def client(test_db):
     routes_module.adapter = FakeMarketDataAdapter()
     return TestClient(app)
 
 
-# --- Tests ---
+# --- Market route tests ---
 
 def test_get_markets_returns_list(client):
     response = client.get("/api/v1/markets")
@@ -97,3 +129,61 @@ def test_get_coin_not_found(client):
     response = client.get("/api/v1/markets/doesnotexist")
     assert response.status_code == 404
     assert "not found" in response.json()["detail"]
+
+
+# --- History route tests ---
+
+def test_get_price_history(client, test_db):
+    """Seed two snapshots then verify the history endpoint returns them."""
+    session = test_db()
+    session.add(PriceSnapshot(
+        coin_id="bitcoin", symbol="btc", name="Bitcoin",
+        price=80000.0, market_cap=1_500_000_000_000,
+        price_change_24h=6.5, captured_at=datetime.now(timezone.utc),
+    ))
+    session.add(PriceSnapshot(
+        coin_id="bitcoin", symbol="btc", name="Bitcoin",
+        price=81000.0, market_cap=1_510_000_000_000,
+        price_change_24h=7.0, captured_at=datetime.now(timezone.utc),
+    ))
+    session.commit()
+    session.close()
+
+    response = client.get("/api/v1/history/bitcoin")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 2
+    assert data[0]["coin_id"] == "bitcoin"
+
+
+def test_get_price_history_not_found(client):
+    """Returns 404 when no history exists for a coin."""
+    response = client.get("/api/v1/history/doesnotexist")
+    assert response.status_code == 404
+
+
+# --- Alerts route tests ---
+
+def test_get_alerts(client, test_db):
+    """Seed one alert then verify the alerts endpoint returns it."""
+    session = test_db()
+    session.add(PriceAlert(
+        coin_id="ethereum", symbol="eth",
+        price_change_24h=8.0, price_at_alert=1600.0,
+        triggered_at=datetime.now(timezone.utc),
+    ))
+    session.commit()
+    session.close()
+
+    response = client.get("/api/v1/alerts")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["coin_id"] == "ethereum"
+
+
+def test_get_alerts_empty(client):
+    """Returns empty list when no alerts have been triggered."""
+    response = client.get("/api/v1/alerts")
+    assert response.status_code == 200
+    assert response.json() == []

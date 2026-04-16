@@ -26,3 +26,25 @@ class MarketSummaryResponse(BaseModel):
     average_price: float
     biggest_gainer: CryptoAssetResponse | None
     assets: list[CryptoAssetResponse]
+
+
+class PriceSnapshotResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    coin_id: str
+    symbol: str
+    name: str
+    price: float
+    market_cap: float
+    price_change_24h: float
+    captured_at: str
+
+
+class PriceAlertResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    coin_id: str
+    symbol: str
+    price_change_24h: float
+    price_at_alert: float
+    triggered_at: str
